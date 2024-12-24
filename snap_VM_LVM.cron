@@ -1,0 +1,20 @@
+#!/bin/sh
+
+#VM server
+now=$(date +%d-%m-%Y)
+mkdir -p /mnt/backup/VM/"$now"/
+
+lvcreate --snapshot --name VM_snap --size 20G /dev/vg_vm/VM && \
+dd if=/dev/vg_vm/VM_snap of=/mnt/backup/VM/"$now"/VM.img bs=4096 status=progress && \
+lvremove -f /dev/vg_vm/VM_snap && \
+virsh dumpxml VM > /mnt/backup/VM/"$now"/VM.xml && \
+
+# Delete all backups until last three
+cd /mnt/backup/VM/ && ls -t ./ | tail -n+4 | xargs rm -rf
+
+    if [[ $? != 0 ]]; then         
+        mail -r "server@mycompany.com" -s "FAILED backup for host:VM" sysadmin@mycompany.com <<< "Backup for VM was FAILED to nas on $now"               
+    else
+        mail -r "server@mycompany.com" -s "SUCCESS backup for host:VM" sysadmin@mycompany.com <<< "VM was successfully backuped to nas on $now"
+    fi
+
